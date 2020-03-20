@@ -1,0 +1,4 @@
+git checkout -b feature/fuga
+git add .
+git commit -am "add feature/fuga"
+git push
