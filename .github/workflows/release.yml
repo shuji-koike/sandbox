@@ -1,0 +1,71 @@
+name: release
+on:
+  push:
+    branches:
+      - release/*
+jobs:
+  create_release:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "::set-env name=TAG_NAME::$(echo ${GITHUB_REF#refs/heads/release/})"
+      - run: |
+          echo "::set-env name=PR_NUM::$(
+            curl -s \
+              -H "Authorization: token ${GITHUB_TOKEN}" \
+              -H "Accept: application/vnd.github.groot-preview+json" \
+              "https://api.github.com/repos/${GITHUB_REPOSITORY}/commits/${GITHUB_SHA}/pulls" |
+                jq -r '.[0].number'
+          )"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - run: |
+          CHANGE_LOG="$(
+            curl -s \
+              -X POST \
+              -H "Authorization: bearer ${GITHUB_TOKEN}" \
+              -d "{\"query\": $(jq -aRs . <<END
+          query {
+            repository(owner: "$(dirname ${GITHUB_REPOSITORY})", name: "$(basename ${GITHUB_REPOSITORY})") {
+              pullRequest(number: ${PR_NUM}) {
+                commits(first: 1000) {
+                  nodes {
+                    commit {
+                      oid
+                      associatedPullRequests(first: 1) {
+                        nodes {
+                          author {
+                            ... on User {
+                              login
+                            }
+                          }
+                          number
+                          title
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+          END
+          )}" https://api.github.com/graphql |
+            jq '.data.repository.pullRequest.commits.nodes[].commit.associatedPullRequests.nodes[0]' |
+              jq -r '"- #" + (.number | tostring) + " " + .title + " @" + .author.login' |
+              sort -r | uniq
+          )"
+          echo $CHANGE_LOG
+          echo "::set-env name=CHANGE_LOG::${CHANGE_LOG//$'\n'/'%0A'}"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - uses: actions/create-release@latest
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ env.TAG_NAME }}
+          release_name: ${{ env.TAG_NAME }}
+          body: |
+            #### CHANGE_LOG
+            ${{ env.CHANGE_LOG }}
+          draft: true
+          prerelease: true
