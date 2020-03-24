@@ -1,0 +1,13 @@
+{
+  "name": "sandbox",
+  "private": true,
+  "scripts": {
+    "build": "npx ncc build create-release/index.js -mso dist/create-release/index.js"
+  },
+  "devDependencies": {
+    "@actions/core": "^1.2.3",
+    "@actions/exec": "^1.0.3",
+    "@actions/github": "^2.1.1",
+    "@zeit/ncc": "^0.22.0"
+  }
+}
