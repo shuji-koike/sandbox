@@ -7,3 +7,5 @@
 ```sh
 npm i -D @zeit/ncc @actions/{core,exec,github}
 ```
+
+hoge
