@@ -1,7 +1,8 @@
 import { opendir, readFile, writeFile } from "node:fs/promises"
 import { parse } from "@typescript-eslint/typescript-estree"
 import path from "node:path"
-import * as ts from "typescript"
+import ts from "typescript"
+import { readConfigFile } from "./utils"
 
 const baseDir = "/Users/shuji/github.com/terass-inc/tera-two/frontend"
 const config = readConfigFile(baseDir)
@@ -60,13 +61,6 @@ async function parseFile(filePath: string) {
   return ast
 }
 
-function readConfigFile(baseDir: string) {
-  const configFileName = ts.findConfigFile(baseDir, ts.sys.fileExists)
-  if (!configFileName) throw new Error("tsconfig.json not found")
-  const configFile = ts.readConfigFile(configFileName, ts.sys.readFile)
-  return ts.parseJsonConfigFileContent(configFile.config, ts.sys, baseDir)
-}
-
 async function* walk(dir: string): AsyncGenerator<string> {
   for await (const d of await opendir(dir)) {
     const entry = path.join(dir, d.name)
@@ -81,4 +75,4 @@ async function* walk(dir: string): AsyncGenerator<string> {
   }
 }
 
-main()
+// main()
