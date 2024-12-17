@@ -7,13 +7,45 @@ import { opendir, readFile, writeFile } from "node:fs/promises"
 import path from "node:path"
 import ts from "typescript"
 import { readConfigFile } from "./utils"
+import { createWriteStream } from "node:fs"
 
 console.debug = () => {}
 
 const files: Record<string, Awaited<ReturnType<typeof parseFile>> | null> = {}
 const deps: { from: string; to?: string; source: string }[] = []
 
-main({})
+// main({})
+main2()
+
+async function main2() {
+  const data = await (await import("./tmp/deps.json")).default
+  const writeable = createWriteStream("./tmp/deps.dot")
+  // https://graphviz.org/docs/layouts/
+  process.stdout.write(`
+digraph mygraph {
+  fontname="sans-serif"
+  node [fontname="sans-serif"]
+  edge [fontname="sans-serif"]
+  node [shape=box];
+  engine=sfdp
+  rankdir=LR
+  ${[
+    ...new Set(
+      data
+        .filter((e) => e.to && !e.to.includes("node_modules/"))
+        // .map((e) => ({
+        //   from: path.resolve(e.from, "../.."),
+        //   to: path.resolve(e.to!, "../.."),
+        // }))
+        .map((e) => `"to:${e.to}" -> "from:${e.from}"`),
+    ),
+  ]
+    .sort()
+    .join("\n")}
+}
+`)
+  writeable.close()
+}
 
 async function main({
   baseDir,
@@ -36,13 +68,12 @@ async function main({
     }
   }
   if (write) {
-    await writeFile("./tmp/files.json", JSON.stringify(files, null, 2))
     await writeFile("./tmp/deps.json", JSON.stringify(deps, null, 2))
   }
 }
 
 async function parseFile(baseDir: string, filePath: string) {
-  console.log(parseFile.name, filePath)
+  console.debug(parseFile.name, filePath)
   const code = await readFile(filePath, "utf-8")
   const config = readConfigFile(baseDir)
   const ast = parse(code, {
@@ -56,8 +87,8 @@ async function parseFile(baseDir: string, filePath: string) {
   simpleTraverse(ast, {
     enter(node) {
       if (node.type === AST_NODE_TYPES.ImportDeclaration) {
-        if (/\.(jpg|png|svg|css)/.test(node.source.value)) return
-        console.log(filePath, node.source.value)
+        if (/\.(jpg|png|svg|css|scss|sass)/.test(node.source.value)) return
+        console.debug(filePath, node.source.value)
         resolve(node.source.value)
       }
       if (node.type === AST_NODE_TYPES.ImportExpression) {
@@ -65,7 +96,7 @@ async function parseFile(baseDir: string, filePath: string) {
           node.source.type === AST_NODE_TYPES.Literal &&
           typeof node.source.value === "string"
         ) {
-          console.log(filePath, node.source.value)
+          console.debug(filePath, node.source.value)
           resolve(node.source.value)
         } else {
           console.error("ImportExpression: source is not a Literal", filePath)
@@ -85,8 +116,8 @@ async function parseFile(baseDir: string, filePath: string) {
     }
     console.debug(source, resolvedModule?.resolvedFileName)
     deps.push({
-      from: filePath,
-      to: resolvedModule?.resolvedFileName,
+      from: filePath.replace(`${baseDir}/`, ""),
+      to: resolvedModule?.resolvedFileName.replace(`${baseDir}/`, ""),
       source,
     })
   }
