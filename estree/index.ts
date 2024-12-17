@@ -4,24 +4,31 @@ import path from "node:path"
 import ts from "typescript"
 import { readConfigFile } from "./utils"
 
-const baseDir = "/Users/shuji/github.com/terass-inc/tera-two/frontend"
+const baseDir = "/Users/shuji/github.com/terass-inc/tera-two"
 const config = readConfigFile(baseDir)
 
 console.debug = () => {}
 
-async function main() {
-  const map: Record<string, Awaited<ReturnType<typeof parseFile>> | null> = {}
+const files: Record<string, Awaited<ReturnType<typeof parseFile>> | null> = {}
+const deps: { from: string; to: string; source: string }[] = []
+
+async function main({
+  write = true,
+  safe = false,
+}: { write?: boolean; safe?: boolean } = {}) {
   for await (const filePath of walk(baseDir)) {
     console.debug(filePath)
     try {
-      map[filePath] = await parseFile(filePath)
-    } catch (e) {
-      map[filePath] = null
-      console.error(e)
+      files[filePath] = await parseFile(filePath)
+    } catch (error) {
+      if (safe) throw error
+      console.error(error)
+      files[filePath] = null
     }
   }
-  if (false) {
-    await writeFile("./tmp.json", JSON.stringify(map, null, 2))
+  if (write) {
+    await writeFile("./tmp/files.json", JSON.stringify(files, null, 2))
+    await writeFile("./tmp/deps.json", JSON.stringify(deps, null, 2))
   }
 }
 
@@ -33,29 +40,28 @@ async function parseFile(filePath: string) {
     // comment: true,
     loc: true,
     range: true,
-    // tokens: true,
+    tokens: true,
   })
   for (const e of ast.body) {
     if (e.type === "ImportDeclaration") {
       if (/\.(jpg|png|svg|css)/.test(e.source.value)) continue
-      const ret = ts.resolveModuleName(
+      console.debug(filePath, e.source.value)
+      const { resolvedModule } = ts.resolveModuleName(
         e.source.value,
         filePath,
         config.options,
         ts.sys,
       )
-      if (!ret.resolvedModule) {
-        console.info(filePath, e.source.value)
+      if (!resolvedModule) {
+        console.error(filePath, e.source.value)
         throw new Error("module not found")
       }
-      if (e.source.value.startsWith(".")) {
-        console.log(
-          filePath,
-          e.source.value,
-          ret.resolvedModule?.resolvedFileName,
-        )
-      }
-      console.debug(e.source.value, ret.resolvedModule?.resolvedFileName)
+      console.debug(e.source.value, resolvedModule?.resolvedFileName)
+      deps.push({
+        from: filePath,
+        to: resolvedModule.resolvedFileName,
+        source: e.source.value,
+      })
     }
   }
   return ast
@@ -69,10 +75,10 @@ async function* walk(dir: string): AsyncGenerator<string> {
       if (d.name === "node_modules") continue
       yield* walk(entry)
     } else if (d.isFile()) {
-      if (!/\.(js|jsx|ts|tsx)$/.test(d.name)) continue
+      if (!/\.((tsx?)|([mc]?jsx?))$/.test(d.name)) continue
       yield entry
     }
   }
 }
 
-// main()
+main()
