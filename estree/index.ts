@@ -86,6 +86,7 @@ async function parseFile(baseDir: string, filePath: string) {
   })
   simpleTraverse(ast, {
     enter(node) {
+      // https://typescript-eslint.io/packages/typescript-estree/ast-spec
       if (node.type === AST_NODE_TYPES.ImportDeclaration) {
         if (/\.(jpg|png|svg|css|scss|sass)/.test(node.source.value)) return
         console.debug(filePath, node.source.value)
@@ -132,7 +133,7 @@ async function* walk(dir: string): AsyncGenerator<string> {
       if (d.name === "node_modules") continue
       yield* walk(entry)
     } else if (d.isFile()) {
-      if (!/\.((tsx?)|([mc]?jsx?))$/.test(d.name)) continue
+      if (!/\.(([cm]?tsx?)|([cm]?jsx?))$/.test(d.name)) continue
       yield entry
     }
   }
