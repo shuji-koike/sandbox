@@ -1,0 +1,19 @@
+{
+  "compilerOptions": {
+    "strict": true,
+    "lib": ["ESNext"],
+    "jsx": "react-jsx",
+    "esModuleInterop": true,
+    "resolveJsonModule": true,
+    "moduleResolution": "nodenext",
+    "module": "NodeNext",
+    "target": "ESNext"
+  },
+  "exclude": [
+    "**/node_modules",
+    "**/build",
+    "**/dist",
+    "**/dev-dist",
+    "**/static"
+  ]
+}

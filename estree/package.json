@@ -1,0 +1,16 @@
+{
+  "name": "@shuji-koike/estree",
+  "version": "0.0.0",
+  "private": true,
+  "dependencies": {
+    "@types/node": "^22.10.2",
+    "@typescript-eslint/typescript-estree": "^8.18.0",
+    "prettier": "^3.4.2",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2"
+  },
+  "devDependencies": {
+    "@types/jscodeshift": "^0.12.0",
+    "jscodeshift": "^17.1.1"
+  }
+}
