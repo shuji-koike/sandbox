@@ -33,11 +33,18 @@ digraph mygraph {
     ...new Set(
       data
         .filter((e) => e.to && !e.to.includes("node_modules/"))
+        .filter((e) => e.to?.includes("libs/domain/"))
+        .filter((e) => !e.from?.includes("libs/domain/"))
         // .map((e) => ({
         //   from: path.resolve(e.from, "../.."),
         //   to: path.resolve(e.to!, "../.."),
         // }))
-        .map((e) => `"to:${e.to}" -> "from:${e.from}"`),
+        .map((e) =>
+          [
+            `"from:${e.from.split("/").slice(0, 2).join("/")}"`,
+            `"to:${e.to}"`,
+          ].join(" -> "),
+        ),
     ),
   ]
     .sort()
